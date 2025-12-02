@@ -19,6 +19,9 @@ interface TaskManagerState {
     qrCode: string | null;
     showQRModal: boolean;
     sortMode: "latest" | "dueDate";
+    filterStatus: "All" | "Pending" | "In Progress" | "Completed";
+    currentPage: number;
+    tasksPerPage: number;
 }
 
 class TaskManager extends Component<{}, TaskManagerState> {
@@ -33,6 +36,9 @@ class TaskManager extends Component<{}, TaskManagerState> {
             qrCode: null,
             showQRModal: false,
             sortMode: "dueDate",
+            filterStatus: "All",
+            currentPage: 1,
+            tasksPerPage: 3,
         };
     }
 
@@ -115,11 +121,15 @@ class TaskManager extends Component<{}, TaskManagerState> {
     }
 
     handleSortChange = (event: ChangeEvent<HTMLSelectElement>) => {
-        this.setState({ sortMode: event.target.value as "latest" | "dueDate" });
+        this.setState({ 
+            sortMode: event.target.value as "latest" | "dueDate",
+            currentPage: 1 // reset to first page
+        });
     };
 
+
     render() {
-        const { tasks, error, showModal, isEditing, currentTask, sortMode } = this.state;
+        const { tasks, error, showModal, isEditing, currentTask, sortMode, filterStatus } = this.state;
 
         //ari mag sort
         const sortedTasks = [...tasks];
@@ -139,11 +149,21 @@ class TaskManager extends Component<{}, TaskManagerState> {
             });
         }
 
+        //filter
+        let visibleTasks = sortedTasks;
+        if (filterStatus !== "All") {
+            visibleTasks = sortedTasks.filter(task => task.status === filterStatus);
+        }
+
+        //pagination
+        const indexOfLastTask = this.state.currentPage * this.state.tasksPerPage;
+        const indexOfFirstTask = indexOfLastTask - this.state.tasksPerPage;
+        const currentTasks = visibleTasks.slice(indexOfFirstTask, indexOfLastTask);
+
         return (
             <Card>
                 <Card.Header className="d-flex justify-content-between align-items-center">
                     <h2 className="m-0">Task Manager</h2>
-
                     <div className="d-flex align-items-center gap-2">
                         <Form.Select
                             size="sm"
@@ -154,7 +174,20 @@ class TaskManager extends Component<{}, TaskManagerState> {
                             <option value="latest">Sort by Latest</option>
                             <option value="dueDate">Sort by Due Date</option>
                         </Form.Select>
-
+                        <Form.Select
+                            size="sm"
+                            value={filterStatus}
+                            onChange={(e) => this.setState({ 
+                                filterStatus: e.target.value as TaskManagerState["filterStatus"],
+                                currentPage: 1 // reset to first page
+                            })}
+                            className="w-auto"
+                        >
+                            <option value="All">All Status</option>
+                            <option value="Pending">Pending</option>
+                            <option value="In Progress">In Progress</option>
+                            <option value="Completed">Completed</option>
+                        </Form.Select>
                         <Button
                             variant="primary"
                             onClick={() => this.handleModalOpen()}
@@ -178,7 +211,7 @@ class TaskManager extends Component<{}, TaskManagerState> {
                             </tr>
                         </thead>
                         <tbody>
-                            {sortedTasks.map(task => (
+                            {currentTasks.map(task => (
                                 <tr key={task.taskID}>
                                     <td>{task.title}</td>
                                     <td>{task.description}</td>
@@ -193,6 +226,25 @@ class TaskManager extends Component<{}, TaskManagerState> {
                                 </tr>
                             ))}
                         </tbody>
+                        <div className="d-flex justify-content-center gap-2 mt-3">
+                            <Button
+                                size="sm"
+                                disabled={this.state.currentPage === 1}
+                                onClick={() => this.setState({ currentPage: this.state.currentPage - 1 })}
+                            >
+                                Previous
+                            </Button>
+
+                            <span>Page {this.state.currentPage} of {Math.ceil(visibleTasks.length / this.state.tasksPerPage)}</span>
+
+                            <Button
+                                size="sm"
+                                disabled={this.state.currentPage === Math.ceil(visibleTasks.length / this.state.tasksPerPage)}
+                                onClick={() => this.setState({ currentPage: this.state.currentPage + 1 })}
+                            >
+                                Next
+                            </Button>
+                        </div>
                     </Table>
                 </Card.Body>
 
