@@ -3,6 +3,13 @@ import { Table, Button, Modal, Form, Alert, Card, Image } from 'react-bootstrap'
 import { Task } from '../models/Task';
 import ApiClient from '../services/ApiClient';
 
+//sorting if same duedate
+const priorityOrder: { [key: string]: number } = {
+    High: 3,
+    Medium: 2,
+    Low: 1
+};
+
 interface TaskManagerState {
     tasks: Task[];
     error: string | null;
@@ -11,6 +18,7 @@ interface TaskManagerState {
     currentTask: Partial<Task> | null;
     qrCode: string | null;
     showQRModal: boolean;
+    sortMode: "latest" | "dueDate";
 }
 
 class TaskManager extends Component<{}, TaskManagerState> {
@@ -24,6 +32,7 @@ class TaskManager extends Component<{}, TaskManagerState> {
             currentTask: null,
             qrCode: null,
             showQRModal: false,
+            sortMode: "dueDate",
         };
     }
 
@@ -105,15 +114,56 @@ class TaskManager extends Component<{}, TaskManagerState> {
         this.setState({ showQRModal: false, qrCode: null });
     }
 
+    handleSortChange = (event: ChangeEvent<HTMLSelectElement>) => {
+        this.setState({ sortMode: event.target.value as "latest" | "dueDate" });
+    };
+
     render() {
-        const { tasks, error, showModal, isEditing, currentTask } = this.state;
+        const { tasks, error, showModal, isEditing, currentTask, sortMode } = this.state;
+
+        //ari mag sort
+        const sortedTasks = [...tasks];
+
+        if (sortMode === "dueDate") {
+            sortedTasks.sort((a, b) => {
+                const dateA = new Date(a.dueDate).getTime();
+                const dateB = new Date(b.dueDate).getTime();
+
+                if (dateA !== dateB) {
+                    //by due date
+                    return dateA - dateB;
+                } else {
+                    //by priority
+                    return (priorityOrder[b.priority] || 0) - (priorityOrder[a.priority] || 0);
+                }
+            });
+        }
 
         return (
             <Card>
-                <Card.Header>
-                    <h2 className="d-inline">Task Manager</h2>
-                    <Button variant="primary" className="float-end" onClick={() => this.handleModalOpen()}>Create Task</Button>
+                <Card.Header className="d-flex justify-content-between align-items-center">
+                    <h2 className="m-0">Task Manager</h2>
+
+                    <div className="d-flex align-items-center gap-2">
+                        <Form.Select
+                            size="sm"
+                            value={sortMode}
+                            onChange={this.handleSortChange}
+                            className="w-auto"
+                        >
+                            <option value="latest">Sort by Latest</option>
+                            <option value="dueDate">Sort by Due Date</option>
+                        </Form.Select>
+
+                        <Button
+                            variant="primary"
+                            onClick={() => this.handleModalOpen()}
+                        >
+                            Create Task
+                        </Button>
+                    </div>
                 </Card.Header>
+
                 <Card.Body>
                     {error && <Alert variant="danger">{error}</Alert>}
                     <Table striped bordered hover responsive>
@@ -128,11 +178,11 @@ class TaskManager extends Component<{}, TaskManagerState> {
                             </tr>
                         </thead>
                         <tbody>
-                            {tasks.map(task => (
+                            {sortedTasks.map(task => (
                                 <tr key={task.taskID}>
                                     <td>{task.title}</td>
                                     <td>{task.description}</td>
-                                    <td>{task.dueDate.toLocaleDateString()}</td>
+                                    <td>{task.dueDate ? new Date(task.dueDate).toLocaleDateString() : "No date"}</td>
                                     <td>{task.priority}</td>
                                     <td>{task.status}</td>
                                     <td>
