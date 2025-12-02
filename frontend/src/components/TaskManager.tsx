@@ -38,7 +38,7 @@ class TaskManager extends Component<{}, TaskManagerState> {
             sortMode: "dueDate",
             filterStatus: "All",
             currentPage: 1,
-            tasksPerPage: 3,
+            tasksPerPage: 5,
         };
     }
 
