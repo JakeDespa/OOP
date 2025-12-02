@@ -3,19 +3,21 @@ import { Table, Button, Modal, Form, Alert, Card, Image } from 'react-bootstrap'
 import { Task } from '../models/Task';
 import ApiClient from '../services/ApiClient';
 
-//sorting if same duedate
 const priorityOrder: { [key: string]: number } = {
     High: 3,
     Medium: 2,
     Low: 1
 };
 
+//allow dueDate as str
+type TaskForm = Partial<Task> & { dueDate?: string };
+
 interface TaskManagerState {
     tasks: Task[];
     error: string | null;
     showModal: boolean;
     isEditing: boolean;
-    currentTask: Partial<Task> | null;
+    currentTask: TaskForm | null;
     qrCode: string | null;
     showQRModal: boolean;
     sortMode: "dueDate";
@@ -25,22 +27,19 @@ interface TaskManagerState {
 }
 
 class TaskManager extends Component<{}, TaskManagerState> {
-    constructor(props: {}) {
-        super(props);
-        this.state = {
-            tasks: [],
-            error: null,
-            showModal: false,
-            isEditing: false,
-            currentTask: null,
-            qrCode: null,
-            showQRModal: false,
-            sortMode: "dueDate",
-            filterStatus: "All",
-            currentPage: 1,
-            tasksPerPage: 5,
-        };
-    }
+    state: TaskManagerState = {
+        tasks: [],
+        error: null,
+        showModal: false,
+        isEditing: false,
+        currentTask: null,
+        qrCode: null,
+        showQRModal: false,
+        sortMode: "dueDate",
+        filterStatus: "All",
+        currentPage: 1,
+        tasksPerPage: 5,
+    };
 
     componentDidMount() {
         this.loadTasks();
@@ -55,13 +54,43 @@ class TaskManager extends Component<{}, TaskManagerState> {
         }
     }
 
-    handleModalOpen = (task: Partial<Task> | null = null) => {
-        this.setState({
-            showModal: true,
-            isEditing: !!task,
-            currentTask: task ? { ...task } : { title: '', description: '', priority: 'Medium', status: 'Pending' },
-        });
-    }
+    handleModalOpen = (task: Task | null = null) => {
+        if (task) {
+            //Convert API date
+            const toInputDate = (dateString: string): string => {
+                const date = new Date(dateString);
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            };
+
+            const dueDateStr = task.dueDate ? toInputDate(task.dueDate.toString()) : "";
+
+            this.setState({
+                showModal: true,
+                isEditing: true,
+                currentTask: { 
+                    ...task,
+                    dueDate: dueDateStr 
+                } as TaskForm,
+            });
+
+        } else {
+            this.setState({
+                showModal: true,
+                isEditing: false,
+                currentTask: {
+                    title: '',
+                    description: '',
+                    priority: 'Medium',
+                    status: 'Pending',
+                    dueDate: '',     
+                } as TaskForm,
+            });
+        }
+    };
+
 
     handleModalClose = () => {
         this.setState({ showModal: false, isEditing: false, currentTask: null });
@@ -83,11 +112,17 @@ class TaskManager extends Component<{}, TaskManagerState> {
         event.preventDefault();
         if (!this.state.currentTask) return;
 
+        //revert dueDate
+        const taskToSave: Partial<Task> = {
+            ...this.state.currentTask,
+            dueDate: this.state.currentTask.dueDate ? new Date(this.state.currentTask.dueDate) : undefined
+        };
+
         try {
             if (this.state.isEditing && this.state.currentTask.taskID) {
-                await ApiClient.updateTask(this.state.currentTask.taskID, this.state.currentTask);
+                await ApiClient.updateTask(this.state.currentTask.taskID, taskToSave);
             } else {
-                await ApiClient.createTask(this.state.currentTask);
+                await ApiClient.createTask(taskToSave);
             }
             this.loadTasks();
             this.handleModalClose();
@@ -106,7 +141,7 @@ class TaskManager extends Component<{}, TaskManagerState> {
             }
         }
     }
-    
+
     handleShowQRCode = async (taskId: number) => {
         try {
             const qrCode = await ApiClient.getTaskQRCode(taskId);
@@ -121,35 +156,24 @@ class TaskManager extends Component<{}, TaskManagerState> {
     }
 
     handleSortChange = (event: ChangeEvent<HTMLSelectElement>) => {
-        this.setState({ 
-            sortMode: event.target.value as "dueDate",
-            currentPage: 1 // reset to first page
-        });
+        this.setState({ sortMode: event.target.value as "dueDate", currentPage: 1 });
     };
-
 
     render() {
         const { tasks, error, showModal, isEditing, currentTask, sortMode, filterStatus } = this.state;
 
         //ari mag sort
         const sortedTasks = [...tasks];
-
         if (sortMode === "dueDate") {
             sortedTasks.sort((a, b) => {
                 const dateA = new Date(a.dueDate).getTime();
                 const dateB = new Date(b.dueDate).getTime();
-
-                if (dateA !== dateB) {
-                    //by due date
-                    return dateA - dateB;
-                } else {
-                    //by priority
-                    return (priorityOrder[b.priority] || 0) - (priorityOrder[a.priority] || 0);
-                }
+                if (dateA !== dateB) return dateA - dateB;
+                return (priorityOrder[b.priority] || 0) - (priorityOrder[a.priority] || 0);
             });
         }
 
-        //filter
+        //filtering
         let visibleTasks = sortedTasks;
         if (filterStatus !== "All") {
             visibleTasks = sortedTasks.filter(task => task.status === filterStatus);
@@ -176,10 +200,7 @@ class TaskManager extends Component<{}, TaskManagerState> {
                         <Form.Select
                             size="sm"
                             value={filterStatus}
-                            onChange={(e) => this.setState({ 
-                                filterStatus: e.target.value as TaskManagerState["filterStatus"],
-                                currentPage: 1 // reset to first page
-                            })}
+                            onChange={(e) => this.setState({ filterStatus: e.target.value as TaskManagerState["filterStatus"], currentPage: 1 })}
                             className="w-auto"
                         >
                             <option value="All">All Status</option>
@@ -187,12 +208,7 @@ class TaskManager extends Component<{}, TaskManagerState> {
                             <option value="In Progress">In Progress</option>
                             <option value="Completed">Completed</option>
                         </Form.Select>
-                        <Button
-                            variant="primary"
-                            onClick={() => this.handleModalOpen()}
-                        >
-                            Create Task
-                        </Button>
+                        <Button variant="primary" onClick={() => this.handleModalOpen()}>Create Task</Button>
                     </div>
                 </Card.Header>
 
@@ -233,9 +249,7 @@ class TaskManager extends Component<{}, TaskManagerState> {
                             >
                                 Previous
                             </Button>
-
                             <span>Page {this.state.currentPage} of {Math.ceil(visibleTasks.length / this.state.tasksPerPage)}</span>
-
                             <Button
                                 size="sm"
                                 disabled={this.state.currentPage === Math.ceil(visibleTasks.length / this.state.tasksPerPage)}
@@ -247,7 +261,6 @@ class TaskManager extends Component<{}, TaskManagerState> {
                     </Table>
                 </Card.Body>
 
-                {/* Task Form Modal */}
                 <Modal show={showModal} onHide={this.handleModalClose}>
                     <Modal.Header closeButton>
                         <Modal.Title>{isEditing ? 'Edit Task' : 'Create Task'}</Modal.Title>
@@ -265,7 +278,7 @@ class TaskManager extends Component<{}, TaskManagerState> {
                                 </Form.Group>
                                 <Form.Group className="mb-3">
                                     <Form.Label>Due Date</Form.Label>
-                                    <Form.Control type="date" name="dueDate" value={currentTask.dueDate ? new Date(currentTask.dueDate).toISOString().split('T')[0] : ''} onChange={this.handleInputChange} />
+                                    <Form.Control type="date" name="dueDate" value={currentTask.dueDate || ''} onChange={this.handleInputChange} />
                                 </Form.Group>
                                 <Form.Group className="mb-3">
                                     <Form.Label>Priority</Form.Label>
@@ -288,8 +301,7 @@ class TaskManager extends Component<{}, TaskManagerState> {
                         )}
                     </Modal.Body>
                 </Modal>
-                
-                {/* QR Code Modal */}
+
                 <Modal show={this.state.showQRModal} onHide={this.handleQRModalClose}>
                     <Modal.Header closeButton>
                         <Modal.Title>Task QR Code</Modal.Title>
