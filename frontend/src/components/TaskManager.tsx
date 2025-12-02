@@ -18,7 +18,7 @@ interface TaskManagerState {
     currentTask: Partial<Task> | null;
     qrCode: string | null;
     showQRModal: boolean;
-    sortMode: "latest" | "dueDate";
+    sortMode: "dueDate";
     filterStatus: "All" | "Pending" | "In Progress" | "Completed";
     currentPage: number;
     tasksPerPage: number;
@@ -122,7 +122,7 @@ class TaskManager extends Component<{}, TaskManagerState> {
 
     handleSortChange = (event: ChangeEvent<HTMLSelectElement>) => {
         this.setState({ 
-            sortMode: event.target.value as "latest" | "dueDate",
+            sortMode: event.target.value as "dueDate",
             currentPage: 1 // reset to first page
         });
     };
@@ -171,7 +171,6 @@ class TaskManager extends Component<{}, TaskManagerState> {
                             onChange={this.handleSortChange}
                             className="w-auto"
                         >
-                            <option value="latest">Sort by Latest</option>
                             <option value="dueDate">Sort by Due Date</option>
                         </Form.Select>
                         <Form.Select
