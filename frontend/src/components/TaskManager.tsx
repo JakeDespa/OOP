@@ -25,10 +25,13 @@ interface TaskManagerState {
     currentTask: TaskForm | null;
     qrCode: string | null;
     showQRModal: boolean;
-    sortMode: "dueDate";
+    sortMode: "dueDate" | "priority";
+    sortOrder: "asc" | "desc";
     filterStatus: "All" | "Pending" | "In Progress" | "Completed";
     currentPage: number;
     tasksPerPage: number;
+    showDeleteConfirmModal: boolean;
+    taskToDelete: number | null;
 }
 
 class TaskManager extends Component<TaskManagerProps, TaskManagerState> {
@@ -41,9 +44,12 @@ class TaskManager extends Component<TaskManagerProps, TaskManagerState> {
         qrCode: null,
         showQRModal: false,
         sortMode: "dueDate",
+        sortOrder: "asc",
         filterStatus: "All",
         currentPage: 1,
         tasksPerPage: 5,
+        showDeleteConfirmModal: false,
+        taskToDelete: null,
     };
 
     componentDidMount() {
@@ -136,15 +142,25 @@ class TaskManager extends Component<TaskManagerProps, TaskManagerState> {
         }
     }
 
-    handleDelete = async (taskId: number) => {
-        if (window.confirm('Are you sure you want to delete this task?')) {
+    handleDelete = (taskId: number) => {
+        this.setState({ showDeleteConfirmModal: true, taskToDelete: taskId });
+    }
+
+    handleDeleteConfirmed = async () => {
+        if (this.state.taskToDelete) {
             try {
-                await ApiClient.deleteTask(taskId);
+                await ApiClient.deleteTask(this.state.taskToDelete);
                 this.loadTasks();
             } catch (error) {
                 this.setState({ error: 'Failed to delete task.' });
+            } finally {
+                this.setState({ showDeleteConfirmModal: false, taskToDelete: null });
             }
         }
+    }
+
+    handleDeleteCancel = () => {
+        this.setState({ showDeleteConfirmModal: false, taskToDelete: null });
     }
 
     handleShowQRCode = async (taskId: number) => {
@@ -161,11 +177,21 @@ class TaskManager extends Component<TaskManagerProps, TaskManagerState> {
     }
 
     handleSortChange = (event: ChangeEvent<HTMLSelectElement>) => {
-        this.setState({ sortMode: event.target.value as "dueDate", currentPage: 1 });
+        this.setState({
+            sortMode: event.target.value as "dueDate" | "priority",
+            sortOrder: "asc",
+            currentPage: 1
+        });
+    };
+
+    handleSortOrderChange = () => {
+        this.setState(prevState => ({
+            sortOrder: prevState.sortOrder === "asc" ? "desc" : "asc"
+        }));
     };
 
     render() {
-        const { tasks, error, showModal, isEditing, currentTask, sortMode, filterStatus } = this.state;
+        const { tasks, error, showModal, isEditing, currentTask, sortMode, sortOrder, filterStatus } = this.state;
 
         //ari mag sort
         const sortedTasks = [...tasks];
@@ -173,8 +199,16 @@ class TaskManager extends Component<TaskManagerProps, TaskManagerState> {
             sortedTasks.sort((a, b) => {
                 const dateA = new Date(a.dueDate).getTime();
                 const dateB = new Date(b.dueDate).getTime();
-                if (dateA !== dateB) return dateA - dateB;
+                if (dateA !== dateB) {
+                    return sortOrder === 'asc' ? dateA - dateB : dateB - dateA;
+                }
                 return (priorityOrder[b.priority] || 0) - (priorityOrder[a.priority] || 0);
+            });
+        } else if (sortMode === "priority") {
+            sortedTasks.sort((a, b) => {
+                const priorityA = priorityOrder[a.priority] || 0;
+                const priorityB = priorityOrder[b.priority] || 0;
+                return sortOrder === 'asc' ? priorityA - priorityB : priorityB - priorityA;
             });
         }
 
@@ -240,7 +274,11 @@ class TaskManager extends Component<TaskManagerProps, TaskManagerState> {
                                 className="w-auto"
                             >
                                 <option value="dueDate">Sort by Due Date</option>
+                                <option value="priority">Sort by Priority</option>
                             </Form.Select>
+                            <Button size="sm" variant="secondary" onClick={this.handleSortOrderChange}>
+                                {sortOrder === 'asc' ? 'Asc' : 'Desc'}
+                            </Button>
                             <Form.Select
                                 size="sm"
                                 value={filterStatus}
@@ -353,6 +391,23 @@ class TaskManager extends Component<TaskManagerProps, TaskManagerState> {
                     <Modal.Body className="text-center">
                         {this.state.qrCode && <Image src={this.state.qrCode} fluid />}
                     </Modal.Body>
+                </Modal>
+
+                <Modal show={this.state.showDeleteConfirmModal} onHide={this.handleDeleteCancel}>
+                    <Modal.Header closeButton>
+                        <Modal.Title>Confirm Deletion</Modal.Title>
+                    </Modal.Header>
+                    <Modal.Body>
+                        Are you sure you want to delete this task?
+                    </Modal.Body>
+                    <Modal.Footer>
+                        <Button variant="secondary" onClick={this.handleDeleteCancel}>
+                            Cancel
+                        </Button>
+                        <Button variant="danger" onClick={this.handleDeleteConfirmed}>
+                            Delete
+                        </Button>
+                    </Modal.Footer>
                 </Modal>
                 </Card>
             </>
