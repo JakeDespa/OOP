@@ -81,7 +81,7 @@ class TaskController {
                 return;
             }
             // Format the due date for display
-            const dueDate = task.dueDate ? new Date(task.dueDate).toLocaleDateString() : 'No due date';
+            const dueDate = (task as any).duedate ? new Date((task as any).duedate).toLocaleDateString() : 'No due date';
             const taskData = `Title: ${task.title}\nDescription: ${task.description}\nDue Date: ${dueDate}\nPriority: ${task.priority}\nStatus: ${task.status}`;
             const qrCode = await QRCodeGenerator.generateQRCode(taskData);
             res.status(200).json({ qrCode });
