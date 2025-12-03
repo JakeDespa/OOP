@@ -14,6 +14,9 @@ class UserRoutes {
         this.router.use(AuthMiddleware.authenticateToken);
         this.router.get('/profile', UserController.viewProfile);
         this.router.put('/profile', UserController.updateProfile);
+        this.router.post('/change-password', UserController.changePassword);
+        this.router.post('/upload-profile-picture', UserController.uploadProfilePicture);
+        this.router.delete('/profile-picture', UserController.deleteProfilePicture);
     }
 }
 

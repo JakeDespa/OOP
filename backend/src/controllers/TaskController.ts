@@ -80,8 +80,9 @@ class TaskController {
                 res.status(404).json({ message: 'Task not found' });
                 return;
             }
-            // Simple string representation of the task for the QR code
-            const taskData = `Title: ${task.title}\nDescription: ${task.description}\nDue: ${task.dueDate}`;
+            // Format the due date for display
+            const dueDate = task.dueDate ? new Date(task.dueDate).toLocaleDateString() : 'No due date';
+            const taskData = `Title: ${task.title}\nDescription: ${task.description}\nDue Date: ${dueDate}\nPriority: ${task.priority}\nStatus: ${task.status}`;
             const qrCode = await QRCodeGenerator.generateQRCode(taskData);
             res.status(200).json({ qrCode });
         } catch (error) {

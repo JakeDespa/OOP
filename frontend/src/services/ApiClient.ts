@@ -28,18 +28,54 @@ class ApiClient {
     // --- Auth ---
     public async register(userData: any): Promise<User> {
         const { data } = await this.client.post('/auth/register', userData);
-        return new User(data.name, data.email, data.userid);
+        return new User(data.name, data.email, data.userid, data.profilepicture || data.profilePicture, data.theme, data.emailnotifications || data.emailNotifications, data.language);
     }
 
     public async login(credentials: any): Promise<{ token: string, user: User }> {
         const { data } = await this.client.post('/auth/login', credentials);
-        const user = new User(data.user.name, data.user.email, data.user.userid);
+        const user = new User(data.user.name, data.user.email, data.user.userid, data.user.profilepicture || data.user.profilePicture, data.user.theme, data.user.emailnotifications || data.user.emailNotifications, data.user.language);
         localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify({
+            userID: user.userID,
+            name: user.name,
+            email: user.email,
+            profilePicture: user.profilePicture,
+        }));
         return { token: data.token, user };
     }
 
     public logout(): void {
         localStorage.removeItem('token');
+        localStorage.removeItem('user');
+    }
+
+    // --- User Profile ---
+    public async changePassword(currentPassword: string, newPassword: string): Promise<void> {
+        await this.client.post('/users/change-password', {
+            currentPassword,
+            newPassword,
+        });
+    }
+
+    public async getUserProfile(): Promise<User> {
+        const { data } = await this.client.get('/users/profile');
+        return new User(data.name, data.email, data.userid, data.profilepicture || data.profilePicture, data.theme, data.emailnotifications || data.emailNotifications, data.language);
+    }
+
+    public async updateUserProfile(profileData: any): Promise<User> {
+        const { data } = await this.client.put('/users/profile', profileData);
+        return new User(data.name, data.email, data.userid, data.profilepicture || data.profilePicture, data.theme, data.emailnotifications || data.emailNotifications, data.language);
+    }
+
+    public async uploadProfilePicture(profilePictureBase64: string): Promise<User> {
+        const { data } = await this.client.post('/users/upload-profile-picture', {
+            profilePicture: profilePictureBase64,
+        });
+        return new User(data.name, data.email, data.userid, data.profilepicture || data.profilePicture, data.theme, data.emailnotifications || data.emailNotifications, data.language);
+    }
+
+    public async deleteProfilePicture(): Promise<void> {
+        await this.client.delete('/users/profile-picture');
     }
 
     // --- Tasks ---

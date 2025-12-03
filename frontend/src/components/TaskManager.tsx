@@ -1,6 +1,7 @@
 import React, { Component, ChangeEvent, FormEvent } from 'react';
-import { Table, Button, Modal, Form, Alert, Card, Image } from 'react-bootstrap';
+import { Table, Button, Modal, Form, Alert, Card, Image, Row, Col } from 'react-bootstrap';
 import { Task } from '../models/Task';
+import { User } from '../models/User';
 import ApiClient from '../services/ApiClient';
 
 const priorityOrder: { [key: string]: number } = {
@@ -11,6 +12,10 @@ const priorityOrder: { [key: string]: number } = {
 
 //allow dueDate as str
 type TaskForm = Partial<Task> & { dueDate?: string };
+
+interface TaskManagerProps {
+    user: User | null;
+}
 
 interface TaskManagerState {
     tasks: Task[];
@@ -26,7 +31,7 @@ interface TaskManagerState {
     tasksPerPage: number;
 }
 
-class TaskManager extends Component<{}, TaskManagerState> {
+class TaskManager extends Component<TaskManagerProps, TaskManagerState> {
     state: TaskManagerState = {
         tasks: [],
         error: null,
@@ -185,34 +190,73 @@ class TaskManager extends Component<{}, TaskManagerState> {
         const currentTasks = visibleTasks.slice(indexOfFirstTask, indexOfLastTask);
 
         return (
-            <Card>
-                <Card.Header className="d-flex justify-content-between align-items-center">
-                    <h2 className="m-0">Task Manager</h2>
-                    <div className="d-flex align-items-center gap-2">
-                        <Form.Select
-                            size="sm"
-                            value={sortMode}
-                            onChange={this.handleSortChange}
-                            className="w-auto"
-                        >
-                            <option value="dueDate">Sort by Due Date</option>
-                        </Form.Select>
-                        <Form.Select
-                            size="sm"
-                            value={filterStatus}
-                            onChange={(e) => this.setState({ filterStatus: e.target.value as TaskManagerState["filterStatus"], currentPage: 1 })}
-                            className="w-auto"
-                        >
-                            <option value="All">All Status</option>
-                            <option value="Pending">Pending</option>
-                            <option value="In Progress">In Progress</option>
-                            <option value="Completed">Completed</option>
-                        </Form.Select>
-                        <Button variant="primary" onClick={() => this.handleModalOpen()}>Create Task</Button>
-                    </div>
-                </Card.Header>
+            <>
+                {this.props.user && (
+                    <Card className="mb-4">
+                        <Card.Body>
+                            <Row className="align-items-center">
+                                <Col xs="auto">
+                                    {this.props.user.profilePicture ? (
+                                        <Image
+                                            src={this.props.user.profilePicture}
+                                            alt="Profile"
+                                            roundedCircle
+                                            style={{ width: '80px', height: '80px', objectFit: 'cover' }}
+                                        />
+                                    ) : (
+                                        <div
+                                            style={{
+                                                width: '80px',
+                                                height: '80px',
+                                                backgroundColor: '#e9ecef',
+                                                borderRadius: '50%',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                color: '#999',
+                                            }}
+                                        >
+                                            No Pic
+                                        </div>
+                                    )}
+                                </Col>
+                                <Col>
+                                    <h4 className="mb-1">{this.props.user.name}</h4>
+                                    <p className="text-muted mb-0">{this.props.user.email}</p>
+                                </Col>
+                            </Row>
+                        </Card.Body>
+                    </Card>
+                )}
 
-                <Card.Body>
+                <Card>
+                    <Card.Header className="d-flex justify-content-between align-items-center">
+                        <h2 className="m-0">Task Manager</h2>
+                        <div className="d-flex align-items-center gap-2">
+                            <Form.Select
+                                size="sm"
+                                value={sortMode}
+                                onChange={this.handleSortChange}
+                                className="w-auto"
+                            >
+                                <option value="dueDate">Sort by Due Date</option>
+                            </Form.Select>
+                            <Form.Select
+                                size="sm"
+                                value={filterStatus}
+                                onChange={(e) => this.setState({ filterStatus: e.target.value as TaskManagerState["filterStatus"], currentPage: 1 })}
+                                className="w-auto"
+                            >
+                                <option value="All">All Status</option>
+                                <option value="Pending">Pending</option>
+                                <option value="In Progress">In Progress</option>
+                                <option value="Completed">Completed</option>
+                            </Form.Select>
+                            <Button variant="primary" onClick={() => this.handleModalOpen()}>Create Task</Button>
+                        </div>
+                    </Card.Header>
+
+                    <Card.Body>
                     {error && <Alert variant="danger">{error}</Alert>}
                     <Table striped bordered hover responsive>
                         <thead>
@@ -310,7 +354,8 @@ class TaskManager extends Component<{}, TaskManagerState> {
                         {this.state.qrCode && <Image src={this.state.qrCode} fluid />}
                     </Modal.Body>
                 </Modal>
-            </Card>
+                </Card>
+            </>
         );
     }
 }

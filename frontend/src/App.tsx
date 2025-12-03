@@ -9,6 +9,7 @@ import ApiClient from './services/ApiClient';
 interface AppState {
   isAuthenticated: boolean;
   loading: boolean;
+  theme: 'light' | 'dark';
 }
 
 class App extends Component<{}, AppState> {
@@ -17,12 +18,27 @@ class App extends Component<{}, AppState> {
     this.state = {
       isAuthenticated: false,
       loading: true,
+      theme: 'light',
     };
   }
 
   componentDidMount() {
     this.checkAuth();
+    this.loadTheme();
   }
+
+  loadTheme = () => {
+    const savedTheme = localStorage.getItem('theme') as 'light' | 'dark';
+    if (savedTheme) {
+      this.applyTheme(savedTheme);
+    }
+  };
+
+  applyTheme = (theme: 'light' | 'dark') => {
+    this.setState({ theme });
+    document.documentElement.setAttribute('data-bs-theme', theme);
+    localStorage.setItem('theme', theme);
+  };
 
   checkAuth = () => {
     const token = localStorage.getItem('token');
@@ -48,7 +64,7 @@ class App extends Component<{}, AppState> {
         <Routes>
           <Route path="/login" element={!this.state.isAuthenticated ? <LoginPage onLogin={this.handleLogin} /> : <Navigate to="/dashboard" />} />
           <Route path="/register" element={!this.state.isAuthenticated ? <RegisterPage /> : <Navigate to="/dashboard" />} />
-          <Route path="/dashboard" element={this.state.isAuthenticated ? <Dashboard onLogout={this.handleLogout} /> : <Navigate to="/login" />} />
+          <Route path="/dashboard" element={this.state.isAuthenticated ? <Dashboard onLogout={this.handleLogout} onThemeChange={this.applyTheme} /> : <Navigate to="/login" />} />
           <Route path="*" element={<Navigate to={this.state.isAuthenticated ? "/dashboard" : "/login"} />} />
         </Routes>
       </Router>
