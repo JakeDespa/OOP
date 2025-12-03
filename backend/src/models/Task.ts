@@ -8,6 +8,7 @@ export class Task {
     public createdAt: Date;
     public updatedAt: Date;
     public userID: number;
+    public categoryID: number | null;
 
     constructor(
         title: string,
@@ -18,7 +19,8 @@ export class Task {
         userID: number,
         taskID?: number,
         createdAt?: Date,
-        updatedAt?: Date
+        updatedAt?: Date,
+        categoryID?: number,
     ) {
         this.taskID = taskID || 0;
         this.title = title;
@@ -29,5 +31,6 @@ export class Task {
         this.userID = userID;
         this.createdAt = createdAt || new Date();
         this.updatedAt = updatedAt || new Date();
+        this.categoryID = categoryID || null;
     }
 }

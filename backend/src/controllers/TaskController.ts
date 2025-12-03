@@ -72,6 +72,25 @@ class TaskController {
         }
     }
 
+    public async assignCategory(req: Request, res: Response): Promise<void> {
+        try {
+            const { id } = req.params;
+            const { categoryId } = req.body;
+            if (!categoryId) {
+                res.status(400).json({ message: 'Category ID is required' });
+                return;
+            }
+            const updatedTask = await TaskService.assignCategoryToTask(Number(id), Number(categoryId));
+            if (!updatedTask) {
+                res.status(404).json({ message: 'Task not found' });
+                return;
+            }
+            res.status(200).json(updatedTask);
+        } catch (error) {
+            res.status(500).json({ message: 'Server error assigning category to task' });
+        }
+    }
+
     public async generateQRCode(req: Request, res: Response): Promise<void> {
         try {
             const { id } = req.params;
@@ -92,3 +111,4 @@ class TaskController {
 }
 
 export default new TaskController();
+

@@ -20,6 +20,7 @@ class TaskRoutes {
         
         this.router.patch('/:id/duedate', TaskController.setDueDate);
         this.router.patch('/:id/complete', TaskController.markComplete);
+        this.router.patch('/:id/category', TaskController.assignCategory);
         
         this.router.get('/:id/qrcode', TaskController.generateQRCode);
     }

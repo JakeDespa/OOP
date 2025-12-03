@@ -81,17 +81,17 @@ class ApiClient {
     // --- Tasks ---
     public async getTasks(): Promise<Task[]> {
         const { data } = await this.client.get('/tasks');
-        return data.map((t: any) => new Task(t.taskid, t.title, t.description, t.duedate, t.priority, t.status));
+        return data.map((t: any) => new Task(t.taskid, t.title, t.description, t.duedate, t.priority, t.status, t.categoryid));
     }
     
     public async createTask(taskData: any): Promise<Task> {
         const { data } = await this.client.post('/tasks', taskData);
-        return new Task(data.taskid, data.title, data.description, data.duedate, data.priority, data.status);
+        return new Task(data.taskid, data.title, data.description, data.duedate, data.priority, data.status, data.categoryid);
     }
 
     public async updateTask(taskId: number, taskData: any): Promise<Task> {
         const { data } = await this.client.put(`/tasks/${taskId}`, taskData);
-        return new Task(data.taskid, data.title, data.description, data.duedate, data.priority, data.status);
+        return new Task(data.taskid, data.title, data.description, data.duedate, data.priority, data.status, data.categoryid);
     }
 
     public async deleteTask(taskId: number): Promise<void> {
@@ -101,6 +101,11 @@ class ApiClient {
     public async getTaskQRCode(taskId: number): Promise<string> {
         const { data } = await this.client.get(`/tasks/${taskId}/qrcode`);
         return data.qrCode;
+    }
+
+    public async assignCategoryToTask(taskId: number, categoryId: number): Promise<Task> {
+        const { data } = await this.client.patch(`/tasks/${taskId}/category`, { categoryId });
+        return new Task(data.taskid, data.title, data.description, data.duedate, data.priority, data.status, data.categoryid);
     }
 
     // --- Categories ---
@@ -127,3 +132,4 @@ class ApiClient {
 }
 
 export default new ApiClient();
+

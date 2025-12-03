@@ -5,6 +5,7 @@ export class Task {
     public dueDate: Date;
     public priority: string;
     public status: string;
+    public categoryID: number | null;
 
     constructor(
         taskID: number,
@@ -12,7 +13,8 @@ export class Task {
         description: string,
         dueDate: Date,
         priority: string,
-        status: string
+        status: string,
+        categoryID: number | null
     ) {
         this.taskID = taskID;
         this.title = title;
@@ -20,5 +22,6 @@ export class Task {
         this.dueDate = new Date(dueDate); // Ensure it's a Date object
         this.priority = priority;
         this.status = status;
+        this.categoryID = categoryID;
     }
 }

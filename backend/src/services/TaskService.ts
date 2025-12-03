@@ -9,8 +9,9 @@ class TaskService {
             taskData.dueDate,
             taskData.priority,
             taskData.status,
-            taskData.userID
+            taskData.userID,
         );
+        task.categoryID = taskData.categoryID || null;
         return TaskRepository.create(task);
     }
 
@@ -37,6 +38,10 @@ class TaskService {
 
     public async markComplete(taskId: number): Promise<Task | null> {
         return this.editTask(taskId, { status: 'Completed' });
+    }
+
+    public async assignCategoryToTask(taskId: number, categoryId: number): Promise<Task | null> {
+        return this.editTask(taskId, { categoryID: categoryId });
     }
 }
 

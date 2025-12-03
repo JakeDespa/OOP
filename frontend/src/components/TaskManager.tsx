@@ -2,6 +2,7 @@ import React, { Component, ChangeEvent, FormEvent } from 'react';
 import { Table, Button, Modal, Form, Alert, Card, Image, Row, Col } from 'react-bootstrap';
 import { Task } from '../models/Task';
 import { User } from '../models/User';
+import { Category } from '../models/Category';
 import ApiClient from '../services/ApiClient';
 
 const priorityOrder: { [key: string]: number } = {
@@ -10,8 +11,7 @@ const priorityOrder: { [key: string]: number } = {
     Low: 1
 };
 
-//allow dueDate as str
-type TaskForm = Partial<Task> & { dueDate?: string };
+type TaskForm = Partial<Task> & { dueDate?: string; categoryID?: number | null };
 
 interface TaskManagerProps {
     user: User | null;
@@ -19,6 +19,7 @@ interface TaskManagerProps {
 
 interface TaskManagerState {
     tasks: Task[];
+    categories: Category[];
     error: string | null;
     showModal: boolean;
     isEditing: boolean;
@@ -37,6 +38,7 @@ interface TaskManagerState {
 class TaskManager extends Component<TaskManagerProps, TaskManagerState> {
     state: TaskManagerState = {
         tasks: [],
+        categories: [],
         error: null,
         showModal: false,
         isEditing: false,
@@ -54,6 +56,7 @@ class TaskManager extends Component<TaskManagerProps, TaskManagerState> {
 
     componentDidMount() {
         this.loadTasks();
+        this.loadCategories();
     }
 
     loadTasks = async () => {
@@ -65,9 +68,17 @@ class TaskManager extends Component<TaskManagerProps, TaskManagerState> {
         }
     }
 
+    loadCategories = async () => {
+        try {
+            const categories = await ApiClient.getCategories();
+            this.setState({ categories });
+        } catch (error) {
+            this.setState({ error: 'Failed to load categories.' });
+        }
+    }
+
     handleModalOpen = (task: Task | null = null) => {
         if (task) {
-            //Convert API date
             const toInputDate = (dateString: string): string => {
                 const date = new Date(dateString);
                 const year = date.getFullYear();
@@ -96,12 +107,12 @@ class TaskManager extends Component<TaskManagerProps, TaskManagerState> {
                     description: '',
                     priority: 'Medium',
                     status: 'Pending',
-                    dueDate: '',     
+                    dueDate: '',
+                    categoryID: null,
                 } as TaskForm,
             });
         }
     };
-
 
     handleModalClose = () => {
         this.setState({ showModal: false, isEditing: false, currentTask: null });
@@ -123,10 +134,10 @@ class TaskManager extends Component<TaskManagerProps, TaskManagerState> {
         event.preventDefault();
         if (!this.state.currentTask) return;
 
-        //revert dueDate
         const taskToSave: Partial<Task> = {
             ...this.state.currentTask,
-            dueDate: this.state.currentTask.dueDate ? new Date(this.state.currentTask.dueDate) : undefined
+            dueDate: this.state.currentTask.dueDate ? new Date(this.state.currentTask.dueDate) : undefined,
+            categoryID: this.state.currentTask.categoryID ? Number(this.state.currentTask.categoryID) : null,
         };
 
         try {
@@ -190,10 +201,30 @@ class TaskManager extends Component<TaskManagerProps, TaskManagerState> {
         }));
     };
 
-    render() {
-        const { tasks, error, showModal, isEditing, currentTask, sortMode, sortOrder, filterStatus } = this.state;
+    handleCategoryChange = async (taskId: number, categoryId: number) => {
+        try {
+            const updatedTask = await ApiClient.assignCategoryToTask(taskId, categoryId);
+            this.setState(prevState => ({
+                tasks: prevState.tasks.map(task =>
+                    task.taskID === taskId ? new Task(
+                        updatedTask.taskID,
+                        updatedTask.title,
+                        updatedTask.description,
+                        updatedTask.dueDate,
+                        updatedTask.priority,
+                        updatedTask.status,
+                        updatedTask.categoryID
+                    ) : task
+                ),
+            }));
+        } catch (error) {
+            this.setState({ error: 'Failed to assign category.' });
+        }
+    };
 
-        //ari mag sort
+    render() {
+        const { tasks, categories, error, showModal, isEditing, currentTask, sortMode, sortOrder, filterStatus } = this.state;
+
         const sortedTasks = [...tasks];
         if (sortMode === "dueDate") {
             sortedTasks.sort((a, b) => {
@@ -212,17 +243,21 @@ class TaskManager extends Component<TaskManagerProps, TaskManagerState> {
             });
         }
 
-        //filtering
         let visibleTasks = sortedTasks;
         if (filterStatus !== "All") {
             visibleTasks = sortedTasks.filter(task => task.status === filterStatus);
         }
 
-        //pagination
         const indexOfLastTask = this.state.currentPage * this.state.tasksPerPage;
         const indexOfFirstTask = indexOfLastTask - this.state.tasksPerPage;
         const currentTasks = visibleTasks.slice(indexOfFirstTask, indexOfLastTask);
 
+        const getCategoryName = (categoryId: number | null) => {
+            if (!categoryId) return 'No Category';
+            const category = categories.find(c => c.categoryID === categoryId);
+            return category ? category.name : 'Unknown Category';
+        };
+        
         return (
             <>
                 {this.props.user && (
@@ -304,6 +339,7 @@ class TaskManager extends Component<TaskManagerProps, TaskManagerState> {
                                 <th>Due Date</th>
                                 <th>Priority</th>
                                 <th>Status</th>
+                                <th>Category</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -315,6 +351,20 @@ class TaskManager extends Component<TaskManagerProps, TaskManagerState> {
                                     <td>{task.dueDate ? new Date(task.dueDate).toLocaleDateString() : "No date"}</td>
                                     <td>{task.priority}</td>
                                     <td>{task.status}</td>
+                                    <td>
+                                        <Form.Select
+                                            size="sm"
+                                            value={task.categoryID || ''}
+                                            onChange={(e) => this.handleCategoryChange(task.taskID, Number(e.target.value))}
+                                            >
+                                            <option value="">No Category</option>
+                                            {this.state.categories.map(category => (
+                                                <option key={category.categoryID} value={category.categoryID}>
+                                                    {category.name}
+                                                </option>
+                                            ))}
+                                        </Form.Select>
+                                    </td>
                                     <td>
                                         <Button variant="info" size="sm" onClick={() => this.handleShowQRCode(task.taskID)}>QR</Button>{' '}
                                         <Button variant="warning" size="sm" onClick={() => this.handleModalOpen(task)}>Edit</Button>{' '}
@@ -376,6 +426,21 @@ class TaskManager extends Component<TaskManagerProps, TaskManagerState> {
                                         <option>Pending</option>
                                         <option>In Progress</option>
                                         <option>Completed</option>
+                                    </Form.Select>
+                                </Form.Group>
+                                <Form.Group className="mb-3">
+                                    <Form.Label>Category</Form.Label>
+                                    <Form.Select
+                                        name="categoryID"
+                                        value={currentTask.categoryID || ''}
+                                        onChange={this.handleInputChange}
+                                    >
+                                        <option value="">No Category</option>
+                                        {this.state.categories.map(category => (
+                                            <option key={category.categoryID} value={category.categoryID}>
+                                                {category.name}
+                                            </option>
+                                        ))}
                                     </Form.Select>
                                 </Form.Group>
                                 <Button variant="primary" type="submit">Save Changes</Button>
