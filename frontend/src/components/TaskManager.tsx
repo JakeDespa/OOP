@@ -469,6 +469,7 @@ class TaskManager extends Component<TaskManagerProps, TaskManagerState> {
                         <Button variant="secondary" onClick={this.handleDeleteCancel}>
                             Cancel
                         </Button>
+
                         <Button variant="danger" onClick={this.handleDeleteConfirmed}>
                             Delete
                         </Button>

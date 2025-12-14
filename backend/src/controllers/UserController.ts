@@ -9,6 +9,7 @@ class UserController {
                 res.status(401).json({ message: 'Unauthorized' });
                 return;
             }
+
             const updatedUser = await UserService.updateProfile(userId, req.body);
             res.status(200).json(updatedUser?.toJSON());
         } catch (error) {
@@ -23,11 +24,13 @@ class UserController {
                 res.status(401).json({ message: 'Unauthorized' });
                 return;
             }
+
             const user = await UserService.getUserById(userId);
             if (!user) {
                 res.status(404).json({ message: 'User not found' });
                 return;
             }
+
             res.status(200).json(user.toJSON());
         } catch (error) {
             res.status(500).json({ message: 'Server error while fetching profile' });

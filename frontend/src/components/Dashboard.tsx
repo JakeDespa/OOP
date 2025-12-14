@@ -4,9 +4,7 @@ import TaskManager from './TaskManager';
 import UserProfile from './UserProfile';
 import { User } from '../models/User';
 import ApiClient from '../services/ApiClient';
-// Placeholders for other manager components
-// import CategoryManager from './CategoryManager';
-// import TagManager from './TagManager';
+
 
 interface DashboardProps {
     onLogout: () => void;
@@ -48,10 +46,7 @@ class Dashboard extends Component<DashboardProps, DashboardState> {
                 return <TaskManager user={this.state.user} />;
             case 'profile':
                 return <UserProfile onThemeChange={this.props.onThemeChange} />;
-            // case 'categories':
-            //     return <CategoryManager />;
-            // case 'tags':
-            //     return <TagManager />;
+           
             default:
                 return <TaskManager user={this.state.user} />;
         }
