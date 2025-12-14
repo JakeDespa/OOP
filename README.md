@@ -42,5 +42,4 @@ OOP-Final-Project/
 PostgreSQL with 5 tables: users, tasks, categories, tags, task_tags. See `additionaltable.sql` for schema.
 
 ---
-**Author:** Jake Despa  
 **Date:** December 2025
